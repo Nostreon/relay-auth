@@ -25,9 +25,14 @@ Check if a pubkey has access to the gated relay.
 
 ```json
 {
-  "pubkey": "abc123..."
+  "pubkey": "abc123...",
+  "action": "connect",
+  "kind": 30023,
+  "relay": "wss://premium.example.com"
 }
 ```
+
+Only `pubkey` is required. `action`, `kind`, and `relay` are optional.
 
 **Response:**
 
