@@ -4,47 +4,52 @@ import { hasAnyActiveSubscription, getAccessibleCreators } from "./access.js";
 const app = Fastify({ logger: true });
 
 /**
- * Auth proxy endpoint called by strfry's auth plugin.
- * strfry sends the authenticated npub, we verify subscription status.
- *
- * This endpoint is called by the strfry write policy plugin
- * and the auth proxy for read access control.
+ * Auth proxy endpoint called after NIP-42 authentication.
+ * The relay sends the authenticated pubkey, we verify subscription status.
  */
 
-// Check if an npub has access to the gated relay
-app.post<{ Body: { npub: string } }>("/check-access", async (request) => {
-  const { npub } = request.body;
+// Check if a pubkey has access to the gated relay
+app.post<{
+  Body: {
+    pubkey: string;
+    action?: "connect" | "read" | "write";
+    kind?: number;
+    relay?: string;
+  };
+}>("/check-access", async (request) => {
+  const { pubkey } = request.body;
 
-  if (!npub) {
-    return { allowed: false, reason: "npub is required" };
+  if (!pubkey) {
+    return { allowed: false, reason: "pubkey is required" };
   }
 
-  const hasAccess = await hasAnyActiveSubscription(npub);
+  const result = await hasAnyActiveSubscription(pubkey);
 
   return {
-    allowed: hasAccess,
-    reason: hasAccess ? "active subscription" : "no active subscription",
+    allowed: result.allowed,
+    reason: result.reason,
+    ...(result.expires_at && { expires_at: result.expires_at }),
   };
 });
 
-// Get list of creator IDs this npub can access (for fine-grained filtering)
-app.post<{ Body: { npub: string } }>(
+// Get list of creator pubkeys this user can access (for fine-grained filtering)
+app.post<{ Body: { pubkey: string } }>(
   "/accessible-creators",
   async (request) => {
-    const { npub } = request.body;
+    const { pubkey } = request.body;
 
-    if (!npub) {
+    if (!pubkey) {
       return { creators: [] };
     }
 
-    const creators = await getAccessibleCreators(npub);
+    const creators = await getAccessibleCreators(pubkey);
     return { creators };
   }
 );
 
 // Health check
 app.get("/health", async () => {
-  return { status: "ok", service: "nostreon-relay-auth" };
+  return { status: "ok", service: "relay-auth" };
 });
 
 const start = async () => {

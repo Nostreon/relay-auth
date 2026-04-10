@@ -34,7 +34,8 @@ Check if a pubkey has access to the gated relay.
 ```json
 {
   "allowed": true,
-  "reason": "active subscription"
+  "reason": "active subscription",
+  "expires_at": 1720000000
 }
 ```
 
@@ -76,7 +77,7 @@ The service expects these tables:
 ```sql
 create table tiers (
   id uuid primary key default gen_random_uuid(),
-  creator_id text not null,       -- creator's hex pubkey
+  creator_pubkey text not null,    -- creator's hex pubkey
   name text not null,
   price_cents integer not null,
   cadence text not null            -- 'monthly' or 'yearly'
@@ -84,7 +85,7 @@ create table tiers (
 
 create table subscriptions (
   id uuid primary key default gen_random_uuid(),
-  subscriber_npub text not null,  -- subscriber's npub
+  subscriber_pubkey text not null, -- subscriber's hex pubkey
   tier_id uuid references tiers(id),
   status text not null,            -- 'active', 'cancelled', 'expired'
   expires_at timestamptz not null
