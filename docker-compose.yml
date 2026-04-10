@@ -1,0 +1,36 @@
+services:
+  # Gated Nostr relay — NIP-42 auth required for read and write
+  strfry-gated:
+    image: ghcr.io/hoytech/strfry:latest
+    restart: unless-stopped
+    volumes:
+      - ./strfry/gated.conf:/etc/strfry.conf
+      - strfry-gated-data:/app/strfry-db
+    ports:
+      - "7002:7777"
+
+  # Access Control Service — verifies subscription status
+  relay-auth:
+    build: .
+    restart: unless-stopped
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      PORT: 3003
+    ports:
+      - "3003:3003"
+
+  # nginx — reverse proxy, rate limiting, connects relay to ACS
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8081:81"
+    depends_on:
+      - strfry-gated
+      - relay-auth
+
+volumes:
+  strfry-gated-data:
