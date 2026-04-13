@@ -1,7 +1,7 @@
 {
   "name": "relay-auth",
   "version": "0.1.0",
-  "description": "NIP-42 relay access control service — verifies subscription status for gated Nostr relays",
+  "description": "Access control service for gated Nostr relays. Reads NIP-63 kind 1163 membership events with NIP-40 expiration and verifies subscription status.",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
@@ -9,12 +9,14 @@
   },
   "dependencies": {
     "fastify": "^5",
-    "@supabase/supabase-js": "^2"
+    "@supabase/supabase-js": "^2",
+    "ws": "^8"
   },
   "devDependencies": {
     "typescript": "^5",
     "tsx": "^4",
-    "@types/node": "^22"
+    "@types/node": "^22",
+    "@types/ws": "^8"
   },
   "license": "MIT"
 }
