@@ -1,0 +1,21 @@
+{
+  "name": "Premium Relay",
+  "description": "Reference NIP-11 document emitting the access_control field proposed in https://github.com/nostr-protocol/nips/pull/2318",
+  "supported_nips": [1, 11, 40, 42, 63],
+  "software": "https://github.com/Nostreon/relay-auth",
+  "version": "reference",
+  "limitation": {
+    "auth_required": true,
+    "payment_required": true,
+    "restricted_writes": true
+  },
+  "access_control": {
+    "authentication": "required",
+    "permissions": [
+      { "action": "read",  "kinds": [1, 20, 21, 1163, 30023] },
+      { "action": "write", "kinds": [1, 20, 21, 1163, 30023] }
+    ],
+    "description": "Active subscription required. Visit info_url to subscribe.",
+    "info_url": "https://example.com/subscribe"
+  }
+}

@@ -1,7 +1,15 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyRequest, type FastifyReply } from "fastify";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { hasAnyActiveSubscription, getAccessibleCreators } from "./access.js";
 
 const app = Fastify({ logger: true });
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const nip11Example = JSON.parse(
+  readFileSync(join(__dirname, "../examples/nip11-example.json"), "utf-8")
+);
 
 /**
  * Auth proxy endpoint called after NIP-42 authentication.
@@ -50,6 +58,32 @@ app.post<{ Body: { pubkey: string } }>(
 // Health check
 app.get("/health", async () => {
   return { status: "ok", service: "relay-auth" };
+});
+
+/**
+ * Reference NIP-11 document demonstrating the `access_control` field proposed
+ * in https://github.com/nostr-protocol/nips/pull/2318. Served on both `GET /`
+ * (with `Accept: application/nostr+json`) and `GET /nip11-example` so clients
+ * and reviewers can fetch a live, runnable example of the shape.
+ */
+const sendNip11 = async (_request: FastifyRequest, reply: FastifyReply) => {
+  reply.header("Content-Type", "application/nostr+json");
+  reply.header("Access-Control-Allow-Origin", "*");
+  return nip11Example;
+};
+
+app.get("/nip11-example", sendNip11);
+
+app.get("/", async (request: FastifyRequest, reply: FastifyReply) => {
+  const accept = String(request.headers["accept"] || "");
+  if (accept.includes("application/nostr+json")) {
+    return sendNip11(request, reply);
+  }
+  return {
+    service: "relay-auth",
+    message:
+      "Send Accept: application/nostr+json to see the reference NIP-11 document, or GET /nip11-example.",
+  };
 });
 
 const start = async () => {

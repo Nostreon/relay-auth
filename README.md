@@ -74,6 +74,15 @@ The gated relay in front of this service advertises its access requirements via 
 }
 ```
 
+A full runnable example of this document is committed at [`examples/nip11-example.json`](examples/nip11-example.json). When this service is running locally you can also fetch it live:
+
+```bash
+curl http://localhost:3003/nip11-example
+curl -H "Accept: application/nostr+json" http://localhost:3003/
+```
+
+Both endpoints return the same JSON with the `Content-Type: application/nostr+json` header, matching what a conforming relay would serve.
+
 When the relay denies a gated action, it uses a human-meaningful reason after the `restricted:` prefix so clients can render it directly:
 
 ```
