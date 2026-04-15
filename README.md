@@ -2,7 +2,12 @@
 
 Access control service for gated Nostr relays. Verifies whether an authenticated pubkey is allowed to access a relay, based on NIP-63 membership events and/or a database of active subscriptions.
 
-Built as a reference implementation for [NIP-63: Exclusive Content (PR #2156)](https://github.com/nostr-protocol/nips/pull/2156) and the broader pattern of [Relay Access Control via Authentication Callbacks](https://github.com/nostr-protocol/nips/issues/2311).
+Built as a reference implementation for two in-flight NIPs:
+
+- [NIP-63: Exclusive Content (PR #2156)](https://github.com/nostr-protocol/nips/pull/2156) — defines kind 1163 membership events and the gated content model
+- [NIP-11: `access_control` field (PR #2318)](https://github.com/nostr-protocol/nips/pull/2318) — lets gated relays advertise their access requirements so clients can render "subscribe to access" *before* connecting, instead of reacting to opaque `restricted:` closes
+
+The `/check-access` HTTP API in this service is an implementation detail, not an interoperability surface. It's what a relay operator calls internally after NIP-42 auth to make a yes/no decision. The *client-facing* interoperability surface is the NIP-11 `access_control` field (see below), which this reference relay advertises.
 
 ## How it works
 
@@ -47,6 +52,36 @@ A kind 1163 membership event looks like:
 - The event is signed by whoever verified the payment (a platform, a Lightning service, etc.)
 
 When this service receives a `/check-access` request, it queries the gated relay with `{"kinds":[1163], "#p":[<subscriber>], "limit":10}` and looks for any event whose `expiration` is in the future.
+
+## NIP-11 `access_control` (client-facing discovery)
+
+The gated relay in front of this service advertises its access requirements via the `access_control` field proposed in [NIP-11 PR #2318](https://github.com/nostr-protocol/nips/pull/2318). Clients can `GET /` on the relay with `Accept: application/nostr+json` before connecting and render an actionable UI based on the response.
+
+```jsonc
+{
+  "name": "Premium Relay",
+  "supported_nips": [1, 11, 42, 63],
+  "access_control": {
+    "authentication": "required",
+    "permissions": [
+      { "action": "read",  "kinds": [1163, 30402, 30403] },
+      { "action": "write", "kinds": [1, 1163, 30023] }
+    ],
+    "description": "Active subscription required for access to premium content.",
+    "info_url": "https://example.com/subscribe"
+  },
+  // other fields...
+}
+```
+
+When the relay denies a gated action, it uses a human-meaningful reason after the `restricted:` prefix so clients can render it directly:
+
+```
+["CLOSED", "<sub-id>", "restricted: no active subscription"]
+["OK", "<event-id>", false, "restricted: write access requires membership"]
+```
+
+The field describes *capability advertisement*, not runtime policy. It tells a client *that* read/write is gated for specific kinds and *where a non-member can go to obtain access*. How the relay actually decides (database lookup, kind 1163 query, token check, etc.) stays an implementation detail — in this reference, that's what the `/check-access` endpoint below handles.
 
 ## API
 
@@ -175,6 +210,8 @@ To swap Supabase for another database, replace the `createClient` and queries in
 
 ## Related
 
+- [NIP-11 `access_control` (PR #2318)](https://github.com/nostr-protocol/nips/pull/2318) — the client-facing discovery field this relay advertises
+- [Issue #2311](https://github.com/nostr-protocol/nips/issues/2311) — discussion thread that led to PR #2318
 - [NIP-42](https://github.com/nostr-protocol/nips/blob/master/42.md) — Authentication of clients to relays
 - [NIP-40](https://github.com/nostr-protocol/nips/blob/master/40.md) — Expiration timestamp
 - [NIP-63 (PR #2156)](https://github.com/nostr-protocol/nips/pull/2156) — Exclusive Content
